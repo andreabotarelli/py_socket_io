@@ -2,6 +2,9 @@ import asyncio
 from json import load
 
 
+NEW_CLIENT = "@@@NEW@@@"
+
+
 async def rcv_message(reader):
     while True:
         response = await reader.read(100)
@@ -21,13 +24,17 @@ async def send_message(writer):
 
 async def main():
     try:
-        conn = {'ip': '127.0.0.1', 'port': 23}
+        conn = {'ip': '127.0.0.1', 'port': 23, 'name': 'NONE'}
         with open('conn.json') as r_file:
             conn = load(r_file)
         ip = conn['ip']
         port = conn['port']
-        print(f'Connecting socket client on {ip}:{port}')
+        name = conn['name']
+        print(f'Connecting socket client on {ip}:{port} for {name}')
         reader, writer = await asyncio.open_connection(ip, port)
+        message = f"{NEW_CLIENT}{name}"
+        writer.write(message.encode())
+        await writer.drain()
         receive_task = asyncio.create_task(rcv_message(reader))
         send_task = asyncio.create_task(send_message(writer))
         await asyncio.wait([receive_task, send_task], return_when=asyncio.FIRST_COMPLETED)

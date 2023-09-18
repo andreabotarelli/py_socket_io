@@ -1,21 +1,27 @@
 import asyncio
 from json import load
+from socket_client import NEW_CLIENT
 
 
-clients = set()
+clients = dict()
 
 
 async def handle_client(reader, writer):
-    clients.add(writer)
+    clients[writer] = dict()
     while True:
         data = await reader.read(100)
         if not data:
             break  # Connection closed
-        for client in clients:
-            if client != writer:
-                print('Routing message to client')
-                client.write(data)
-                await client.drain()
+        message = data.decode()
+        if NEW_CLIENT in message:
+            clients[writer]['name'] = message.replace(NEW_CLIENT, '')
+        else:
+            for client in clients.keys():
+                if client != writer:
+                    print('Routing message to client')
+                    forward_data = f"{clients[writer]['name']}: {message}"
+                    client.write(forward_data.encode())
+                    await client.drain()
     writer.close()
 
 
